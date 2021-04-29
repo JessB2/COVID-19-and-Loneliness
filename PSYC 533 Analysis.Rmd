@@ -1,0 +1,233 @@
+---
+title: "Data cleaning and analysis by Luyang"
+output: html_notebook
+---
+
+
+
+```{r}
+setwd("/Users/luyang/Downloads") 
+getwd()
+PL=read.csv("PL.csv")
+```
+```{r}
+#Filter out all incomplete data#
+PL=na.omit(PL)
+```
+
+
+```{r}
+#Convert Physical Activity day to 0-7#
+PL$Vig_Day = PL$Vig_Day -1
+PL$Mod_Day = PL$Mod_Day -1
+PL$Walk_Day = PL$Walk_Day -1
+```
+
+
+```{r}
+#Convert Physical Activity to a general index#
+PL$Walk_MET= 3.3 * PL$Walk_Time * PL$Walk_Day
+PL$Mod_MET= 4.0 * PL$Mod_Time * PL$Mod_Day
+PL$Vig_MET= 8.0 * PL$Vig_Time * PL$Vig_Day
+PL$PhyAct=PL$Walk_MET+PL$Mod_MET+PL$Vig_MET
+```
+
+```{r}
+#Reverse Coding for Loneliness Scale#
+PL$Lone_1= 5-PL$Lone_1
+PL$Lone_2= 5-PL$Lone_2
+PL$Lone_3= 5-PL$Lone_3
+PL$Lone_4= 5-PL$Lone_4
+PL$Lone_5= 5-PL$Lone_5
+PL$Lone_6= 5-PL$Lone_6
+PL$Lone_7= 5-PL$Lone_7
+PL$Lone_8= 5-PL$Lone_8
+PL$Lone_9= 5-PL$Lone_9
+PL$Lone_10= 5-PL$Lone_10
+PL$Lone_11= 5-PL$Lone_11
+PL$Lone_12= 5-PL$Lone_12
+PL$Lone_13= 5-PL$Lone_13
+PL$Lone_14= 5-PL$Lone_14
+PL$Lone_15= 5-PL$Lone_15
+PL$Lone_16= 5-PL$Lone_16
+PL$Lone_17= 5-PL$Lone_17
+PL$Lone_18= 5-PL$Lone_18
+PL$Lone_19= 5-PL$Lone_19
+PL$Lone_20= 5-PL$Lone_20
+```
+
+```{r}
+#A general index for Loneliness#
+PL$LoneGen= (PL$Lone_1+PL$Lone_2+PL$Lone_3+PL$Lone_4+PL$Lone_5+PL$Lone_6+PL$Lone_7+PL$Lone_8+PL$Lone_9+PL$Lone_10+PL$Lone_11+PL$Lone_12+PL$Lone_13+PL$Lone_14+PL$Lone_15+PL$Lone_16+PL$Lone_17+PL$Lone_18+PL$Lone_19+PL$Lone_20)/20
+```
+
+```{r}
+PL$Priming=as.factor(PL$Priming)
+PL$LivCamp=2-PL$LivCamp
+PL$LivCamp=as.factor(PL$LivCamp)
+PL$Year=as.factor(PL$Year)
+PL$Major=as.factor(PL$Major)
+PL$LivWith=as.factor(PL$LivWith)
+```
+
+```{r}
+attach(PL)
+hist(PhyAct, main="Physical Activity")
+```
+```{r}
+
+```
+There are outliers in PhyAct
+```{r}
+boxplot(PhyAct)
+```
+```{r}
+which(PhyAct>5000)
+```
+```{r}
+PL=PL[-c(5,21,62),]
+```
+Filter out the outliers: row 5,21,62.
+```{r}
+hist(PL$PhyAct, main="Physical Activity")
+```
+```{r}
+```
+The histogram of PhyAct without outliers.
+```{r}
+scatter.smooth(PL$Attention~PL$LoneGen,main="Perceived Loneliness vs Attention Question")
+```
+```{r}
+```
+It shows a positive relationship. But there are points in the top left corner and bottome right corners (responses might not pass the attention check)
+
+```{r}
+AttenCheck= PL$LoneGen-PL$Attention
+boxplot(AttenCheck)
+```
+```{r}
+which(AttenCheck>2)
+```
+```{r}
+AttenCheck[c(6,17)]
+```
+```{r}
+```
+row 6 is the outlier in the top
+
+```{r}
+which(AttenCheck< (-0.7))
+```
+```{r}
+AttenCheck[c(8,27,36)]
+```
+```{r}
+
+```
+row 8,27,36 are outliers in the bottom
+```{r}
+PL=PL[-c(6,8,27,36),]
+```
+
+
+```{r}
+scatter.smooth(PL$Attention~PL$LoneGen,main="Perceived Loneliness vs Attention Question")
+```
+```{r}
+```
+Scatterplot after dropping the responses that fail the attention check.
+
+```{r}
+hist(LoneGen, main="Loneliness")
+```
+```{r}
+
+```
+No outliers were identified for Perceived Loneliness.
+```{r}
+#smoothed scatterplot
+scatter.smooth(PL$PhyAct,y=PL$LoneGen,main="Perceived Loneliness vs Physical Activity")
+#adding linear regression line
+abline(lm(LoneGen~PhyAct,data=PL), col="red") # regression line (y~x) 
+abline(v=0, col="blue",lty=2)
+
+```
+```{r}
+```
+Roughly linear relationship.
+```{r}
+#Centering around PhyAct#
+PL$PhyAct.mc <- PL$PhyAct - mean(PL$PhyAct)
+library(psych)
+describe(PL[,c(43,44,45)])
+```
+```{r}
+fit1= lm(LoneGen~ PhyAct.mc*Priming, data =PL) 
+summary(fit1)
+```
+```{r}
+library(interactions)
+
+
+probe_interaction(fit1, pred = PhyAct.mc, modx = Priming, centered="none",
+                   x.label = "Physical Activity", y.label = "Loneliness",
+                   legend.main = "COVID-19 Priming", cond.int=TRUE, johnson_neyman=FALSE)
+```
+```{r}
+boxplot(LoneGen~Priming,data=PL, main="Priming Effect on Perceived Loneliness",
+   xlab="Priming", ylab="Perceived Loneliness")
+```
+```{r}
+
+fit2=lm(LoneGen~ PhyAct.mc*LivCamp, data =PL)
+summary(fit2)
+```
+```{r}
+library(interactions)
+
+
+probe_interaction(fit2, pred = PhyAct.mc, modx = LivCamp, centered="none",
+                   x.label = "Physical Activity", y.label = "Loneliness",
+                   legend.main = "Live on Campus", cond.int=TRUE, johnson_neyman=FALSE)
+```
+```{r}
+boxplot(LoneGen~LivCamp,data=PL, main="Living on Campus or not vs Perceived Loneliness",
+   xlab="Living on Campus", ylab="Perceived Loneliness")
+```
+```{r}
+fit3= lm(LoneGen~ PhyAct.mc*LivWith, data =PL) 
+summary(fit3)
+```
+```{r}
+
+library(tidyverse)
+```
+```{r}
+#Contrast coding LivWith
+LivWithCon <- PL %>% mutate(LivAlone= case_when(LivWith == 3 ~ 1, 
+                        TRUE ~ 0))        
+head(LivWithCon[,c(10,46)],n=10)             
+```
+```{r}
+LivWithCon$LivAlone=as.factor(LivWithCon$LivAlone)
+con1 <-lm( LoneGen~ PhyAct.mc*LivAlone, data=LivWithCon)
+summary(con1)
+```
+```{r}
+
+library(interactions)
+
+
+probe_interaction(con1, pred = PhyAct.mc, modx = LivAlone, centered="none",
+                   x.label = "Physical Activity", y.label = "Loneliness",
+                   legend.main = "Live Alone", cond.int=TRUE, johnson_neyman=FALSE)
+
+```
+```{r}
+boxplot(LoneGen~LivAlone,data=LivWithCon, main="Living alone or not vs Perceived Loneliness",
+   xlab="Living Alone", ylab="Perceived Loneliness")
+```
+```{r}
+
+```
+
